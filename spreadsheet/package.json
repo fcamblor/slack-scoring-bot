@@ -1,0 +1,23 @@
+{
+  "name": "slack-scoring-bot-spreadsheet",
+  "version": "1.0.0",
+  "description": "Spreadsheet backing data for slack scoring bot",
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fcamblor/slack-scoring-bot.git"
+  },
+  "author": "fcamblor",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/fcamblor/slack-scoring-bot/issues"
+  },
+  "homepage": "https://github.com/fcamblor/slack-scoring-bot#readme",
+  "devDependencies": {
+    "@google/clasp": "2.3.0",
+    "typescript": "3.8.3"
+  },
+  "dependencies": {
+    "@types/google-apps-script": "1.0.11"
+  }
+}
