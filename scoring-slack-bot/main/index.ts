@@ -71,10 +71,11 @@ type UsersById = { [key in string]: User };
 
 function doPost(e){
   var payload = JSON.parse(e.postData.contents);
-  // ScoringBot.INSTANCE.log('POST event: ' + JSON.stringify(payload));
   if(PROPS.SLACK_CHALLENGE_ACTIVATED === "true") {
     // ScoringBot.INSTANCE.log("Challenge activated and returned !");
     return ContentService.createTextOutput(payload.challenge);
+  } else {
+    ScoringBot.INSTANCE.log('POST event: ' + JSON.stringify(payload));
   }
 
   var event: SlackEvent = payload.event;
@@ -349,7 +350,7 @@ Following commands are available :
   }
 
   log(text){
-    if(PROPS.LOG_ENABLED === "true") {
+    if(PROPS.LOG_ENABLED === "true" && PROPS.SPREADSHEET_ID) {
       console.log(text);
       const logsSheet = this.ensureSheetCreated("Logs", null, null);
       logsSheet.appendRow([new Date(), text]);
