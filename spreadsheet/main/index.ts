@@ -59,11 +59,10 @@ function EXTRACT_SCORES_FROM_REACTIONS(channelName: string, textualChannelConfig
   const usersById = getUsersFrom(usersData);
   const reactionLogs = getReactionLogsFrom(reactionLogsData);
 
-  const scoresRows = [ [ "issuer name", "target name", "score change" ] ];
   const scoreLogs = generateScoreLogsFor(channelName, JSON.parse(textualChannelConfig), usersById, reactionLogs);
-  for(let i=0; i<scoreLogs.length; i++){
-    scoresRows.push([ scoreLogs[i].issuerName, scoreLogs[i].targetName, scoreLogs[i].scoreChange as any ]);
-  }
+  const scoresRows = [[ "issuer name", "target name", "score change" ]]
+    .concat(scoreLogs.map(scoreLog => [ scoreLog.issuerName, scoreLog.targetName, scoreLog.scoreChange as any ]))
+
   return scoresRows;
 }
 
@@ -76,30 +75,27 @@ function SCORES_FOR_CHANNEL(channelName: string, textualChannelConfig: string, u
 
 
 function generateScoreLogsFor(channelName: string, channelConfig: ChannelConfig, usersById: UsersById, reactionLogs: ReactionLog[]): ScoreLog[] {
-  const scoreLogs: ScoreLog[] = [];
-  for(let i=0; i<reactionLogs.length; i++){
-    const rl = reactionLogs[i];
-    let scoreChange: number|null = null;
-    if(channelName === rl.channel
-        && !!channelConfig.reactionsConfigs[rl.reaction]
-        && ((channelConfig.adminUser && channelConfig.adminUser === rl.issuerUserId)
-            || !channelConfig.restrictReactionsToThreadAuthors
-            || rl.threadAuthorUserId == rl.issuerUserId)
-    ) {
-      scoreChange = channelConfig.reactionsConfigs[rl.reaction].scoreIncrement * (rl.type === 'reaction_removed'?-1:1);
-    }
+  return reactionLogs.map(rl => ({
+    issuerUserId: rl.issuerUserId,
+    issuerName: usersById[rl.issuerUserId].name,
+    targetUserId: rl.targetUserId,
+    targetName: usersById[rl.targetUserId].name,
+    reaction: rl.reaction,
+    scoreChange: scoreChangeFor(rl, channelName, channelConfig)
+  }));
+}
 
-    scoreLogs.push({
-      issuerUserId: rl.issuerUserId,
-      issuerName: usersById[rl.issuerUserId].name,
-      targetUserId: rl.targetUserId,
-      targetName: usersById[rl.targetUserId].name,
-      reaction: rl.reaction,
-      scoreChange: scoreChange
-    });
+function scoreChangeFor(reactionLog: ReactionLog, inChannel: string, channelConfig: ChannelConfig): number|null {
+  let scoreChange: number|null = null;
+  if(inChannel === reactionLog.channel
+      && !!channelConfig.reactionsConfigs[reactionLog.reaction]
+      && ((channelConfig.adminUser && channelConfig.adminUser === reactionLog.issuerUserId)
+          || !channelConfig.restrictReactionsToThreadAuthors
+          || reactionLog.threadAuthorUserId == reactionLog.issuerUserId)
+  ) {
+    scoreChange = channelConfig.reactionsConfigs[reactionLog.reaction].scoreIncrement * (reactionLog.type === 'reaction_removed'?-1:1);
   }
-
-  return scoreLogs;
+  return scoreChange;
 }
 
 function generateTotalScoresFor(channelName: string, channelConfig: ChannelConfig, usersById: UsersById, reactionLogs: ReactionLog[]) {
