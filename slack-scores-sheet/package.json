@@ -15,6 +15,7 @@
   "homepage": "https://github.com/fcamblor/slack-scoring-bot#readme",
   "devDependencies": {
     "@google/clasp": "2.3.0",
+    "@types/luxon": "1.22.0",
     "typescript": "3.8.3"
   },
   "dependencies": {

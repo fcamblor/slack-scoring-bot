@@ -1,3 +1,5 @@
+/// <reference path="luxon.d.ts" />
+
 /*
 channelConfig should look like this :
 {
