@@ -102,6 +102,7 @@ class ScoringBot {
         this.updateUsers();
       } else if(ScoringBot.isUpdateUsersCommand(event)) {
         this.updateUsers();
+        this.botShouldSay(event.channel, "Users have been updated");
       } else if(ScoringBot.isScoresCommand(event)) {
         this.showScoresFor(event.channel);
       } else if(ScoringBot.isHelpCommand(event)) {
@@ -255,7 +256,7 @@ Following observed interactions are configured on this channel :
     for(let i=0; i<configuredReactions.length; i++){
       const reaction = configuredReactions[i];
       const scoreIncrement = channelConfig.config.reactionsConfigs[reaction].scoreIncrement;
-      message += `- When reaction :${reaction}: is set ${allowedUserMessage} : adding ${scoreIncrement} point${(scoreIncrement>1?"s":"")} for message author receving the reaction\n`;
+      message += `- When reaction :${reaction}: is set ${allowedUserMessage} : adding ${scoreIncrement} point${(scoreIncrement>1?"s":"")} for target message's author receving the reaction\n`;
     }
 
     message += `
