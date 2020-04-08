@@ -101,7 +101,7 @@ Some sample quizz channel I setup at 4SH using this bot :
 - Open Slack and invite the bot into one of the channel (prefer to choose a testing channel to begin with) : `/invite @<bot_name>`
 - Initialize the channel by saying `!setup <a config name>` (use any string, like `testing` for the config name)
 - This command should create a lot of tabs in the Google Spreadsheet (`Logs`, `UserList`, `Config`, `<config name>`, `<config name>-ReactionsLog`)
-- You can configure your channel preferences on the `Config` tab, on the `ReactionConfig` cell which is a JSON :
+- You can configure your channel preferences on the `Config` tab, on the `ChannelConfig` cell which is a JSON :
   - `adminUser`: User id of the channel id, can be omitted.
   - `restrictReactionsToThreadAuthors`: Only thread authors are allowed to put reactions on threads that gives points
   - `reactionsConfigs`: Put here the different reactions that are going to generate points (and how many points it will represent)

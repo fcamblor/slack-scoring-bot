@@ -134,7 +134,7 @@ class ScoringBot {
 
     // If config/userlist/logs tab don't exist yet, it means that spreadsheet has not been initialized yet and we need to create it on the fly
     this.ensureSheetCreated("UserList", ["id", "name"], "values");
-    const configSheet = this.ensureSheetCreated("Config", ["Channel", "SheetName", "ReactionConfig", "Leaderboard"], "values");
+    const configSheet = this.ensureSheetCreated("Config", ["Channel", "Sheet basename", "ChannelConfig", "Leaderboard link"], "values");
 
     let channelConfig = this.getConfigForChannel(event.channel);
     if(channelConfig){
