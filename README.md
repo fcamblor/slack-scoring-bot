@@ -88,7 +88,7 @@ Some sample quizz channel I setup at 4SH using this bot :
 
 ### Scores Spreadsheet config & DB creation
 
-- Move to the `spreadsheet/` directory then run `npm install` on it
+- Move to the `slack-scores-sheet/` directory then run `npm install` on it
 - Run `npx clasp create` then choose `sheets` in the list of script types : a new google spreadsheet & app script should be created under your google account.
   - Copy generated google spreadsheet id ...
     <img src="./assets/Google_Spreadsheet_generated_id.png" width="800px" alt="Retrieving Google Spreadsheet id" />
