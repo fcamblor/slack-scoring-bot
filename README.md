@@ -1,7 +1,8 @@
 # <h1 align="center">Welcome to Slack GAS Scoring Bot 👋</h1>
 > A Google App Script-based Scoring bot to manage channel-based quizz / scores in Slack
 
-## Overview
+Overview
+----------
 
 During lockdown, we all have more Slack interactions than usual, and sometimes, it's nice to relax by
 playing with your colleagues on some quizz (it generally helps to know them better).
@@ -22,7 +23,8 @@ Some sample quizz channel I setup at 4SH using this bot :
 - `guess-the-emojis` : Each user can post a list of emojis + a hashtag hint (ex: #movie, #tvshow, #book, #band, #game)
   Others have to guess what this list of emojis mean. Simply use your imagination, unlimited possibilities.
 
-## Installation instructions
+Installation instructions
+----------
 
 ### Installation pre-requisites
 
@@ -106,12 +108,57 @@ Some sample quizz channel I setup at 4SH using this bot :
 - Open Slack and invite the bot into one of your channels (prefer to choose a testing channel to begin with) : `/invite @<bot_name>`
 - Initialize the channel by saying `!setup <a config name>` (use any string, like `testing` for the config name)
 - This command should create a lot of tabs in the Google Spreadsheet (`Logs`, `UserList`, `Config`, `<config name>`, `<config name>-ReactionsLog`)
-- You can configure your channel preferences on the `Config` tab, on the `ChannelConfig` cell which is a JSON :
-  - `adminUser`: User id of the channel id, can be omitted.
-  - `restrictReactionsToThreadAuthors`: Only thread authors are allowed to put reactions on threads that gives points
-  - `reactionsConfigs`: Put here the different reactions that are going to generate points (and how many points it will represent)
 - Channel help can be displayed by saying `!help`
 - In the spreadsheet, run `File > Publish on web` and :
   - Select `<config name>` tab and click on `Publish`
   - Copy URL corresponding to the `<config name>` tab (this will contain your channel's leaderboard scores)
   - Paste this URL in the `Config` tab's `Leaderboard` column : this link will be used when `!scores` will be run in the channel
+- You can configure your channel preferences on the `Config` tab, more on this in **Configuration** section below
+ 
+
+Configuration
+----------
+
+Every channel can be configured specifically by providing a JSON configuration in the Spreadsheet's `Config` tab.
+
+This JSON configuration has following shape :
+
+    {
+      adminUser: "<USER ID>", // optional
+      restrictReactionsToThreadAuthors: true,
+      reactionsConfigs: {
+        "white_check_mark": { scoreIncrement: 2 },
+        "lock":{ scoreIncrement:1 }
+      }
+    }
+
+At the moment, any change to this configuration is "backward compatible" : if you change any of those rule, score will be automatically
+re-calculated.
+
+However, note that the Bot will only track reactions starting from the moment he is invited on the channel 
+
+#### adminUser
+
+**Type** : `string` (optional)
+
+Consider provided user id will be the channel's administrator.
+Channel administrator can put reactions on any message : the reaction will give points to target message's author.
+If this entry is left `undefined`, then no user will have such super powers.
+
+
+#### restrictReactionsToThreadAuthors
+
+**Type** : `boolean` (mandatory)
+
+When set to `true` (default), only thread author's reactions will give points to target message's author.
+For example, if ✅ gives 2 points, 🔒 gives 1 point,  and `user1` creates a threaded question :
+- if `user1` puts a ✅ reaction on one of the thread messages, it will give 2 points to the message's author
+- if `user2` puts a ✅ reaction on one of the thread messages, no points will be earned
+- if `user1` puts a 🔒 reaction on the root thread message, 1 point will be given to `user1` (he's auto-attributing 1 point)
+
+
+#### restrictReactionsToThreadAuthors
+
+**Type** : Map of `{ scoreIncrement: number }` entries (mandatory)
+
+Allows to attribute different amount of points on different reactions.
