@@ -172,7 +172,7 @@ class ScoringBot {
     ]);
     this.setSheetHeaderRows(reactionsSheet, ["date", "issuer user id", "target user id", "channel reaction", "type", "thread id", "thread author id", "target message"], "values");
 
-    this.botShouldSay(event.channel, "Your config ["+configName+"] has been successfully initialized !");
+    this.botShouldSay(event.channel, "Your config ["+configName+"] has been successfully initialized !\n⚠️Don't forget to publish the score sheet and put the link in the leaderboard channel configuration.");
   }
 
   ensureSheetCreated(sheetName: string, headerCells: string[]|null, headerCellsType: "formulas"|"values"|null) {
@@ -227,7 +227,7 @@ class ScoringBot {
       return;
     }
 
-    this.botShouldSay(channel, scoresMessage+"\n_Complete leaderboard is available here : "+channelConfig.leaderboardLink+" _");
+    this.botShouldSay(channel, scoresMessage+(channelConfig.leaderboardLink?"\n_Complete leaderboard is available here : "+channelConfig.leaderboardLink+" _":""));
   }
 
   showHelp(channel: string) {
@@ -262,7 +262,7 @@ Following observed interactions are configured on this channel :
 Following commands are available :
 - \`!help\` : Show help
 - \`!setup <configuration name>\` : Initializes channel configuration into the spreadsheet. \`<configuration name>\` is a name that will be used for spreadsheet tabs.
-- \`!scores\` : Show podium (scores total) for this channel. Complete leaderboard is available here ${channelConfig.leaderboardLink}.
+- \`!scores\` : Show podium (scores total) for this channel. ${channelConfig.leaderboardLink?"Complete leaderboard is available here "+channelConfig.leaderboardLink+".":""}
 - \`!update-users\` : Refreshes this slack server's users list (when a username changes, or new users are added on Slack)
 `;
 
