@@ -342,7 +342,7 @@ Following commands are available :
     if(payload && payload.messages && payload.messages[0]) {
       return {
         threadId: payload.messages[0].thread_ts,
-        threadAuthorId: payload.messages[0].parent_user_id || payload.messages[0].user,
+        threadAuthorId: payload.messages[0].parent_user_id || payload.messages[0].user as string,
         text: payload.messages[0].text
       };
     } else {
