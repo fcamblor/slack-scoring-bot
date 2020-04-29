@@ -233,6 +233,12 @@ Example: \`!reactions-config delete :white_check_mark:\`
     }
     const configName = args[0];
 
+    const channelDescriptors = this.findChannelDescriptorsByName(configName);
+    if(channelDescriptors.length) {
+      this.botShouldSay(event.channel, "Provided config name already exists ! Use another one please !", event.thread_ts);
+      return;
+    }
+
     configSheet.appendRow([ event.channel, configName, JSON.stringify({
       adminUser: event.user,
       restrictReactionsToThreadAuthors:true,
@@ -385,22 +391,29 @@ Following commands are available :
     }
   }
 
-  getConfigForChannel(channel: string): ChannelDescriptor|null {
+  getAllChannelDescriptors(): ChannelDescriptor[] {
     const configSheet = this.getSheetByName("Config");
+    const channelDescriptors: ChannelDescriptor[] = [];
     const configData = configSheet.getDataRange().getValues();
     for(let i=1; i<configData.length; i++){
-      if(configData[i][0] === channel) {
-        return {
-          channelId: channel,
+      channelDescriptors.push({
+          channelId: configData[i][0],
           config: JSON.parse(configData[i][2]),
           sheetName: configData[i][1],
           reactionSheetName: configData[i][1]+"-ReactionsLog",
           leaderboardLink: configData[i][3],
           configSheetRow: i+1
-        };
-      }
+        });
     }
-    return null;
+    return channelDescriptors;
+  }
+
+  getConfigForChannel(channel: string): ChannelDescriptor|undefined {
+    return this.getAllChannelDescriptors().find(descriptor => descriptor.channelId === channel);
+  }
+
+  findChannelDescriptorsByName(name: string): ChannelDescriptor[] {
+    return this.getAllChannelDescriptors().filter(descriptor => descriptor.sheetName === name);
   }
 
   retrieveMessageInfosFor(channel: string, messageId: string): MessageInfos|null {
