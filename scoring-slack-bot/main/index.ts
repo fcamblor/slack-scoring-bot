@@ -233,6 +233,14 @@ class ScoringBot {
 
   showHelp(channel: string) {
     const channelConfig = this.getConfigForChannel(channel);
+    if(!channelConfig) {
+      this.botShouldSay(channel, `
+It appears this channel has not be configured yet.
+To initialize it, you can type \`!setup <configuration name>\`, it will initialize channel configuration into the spreadsheet. \`<configuration name>\` is a name that will be used for spreadsheet tabs.
+      `);
+      return;
+    }
+
     const usersById = this.getUsersById();
 
     let message = `Hello ! I am a bot having the goal to take note of scores when questions are asked on this channel.
@@ -261,10 +269,10 @@ Following observed interactions are configured on this channel :
 
     message += `
 Following commands are available :
-- \`!help\` : Show help
-- \`!setup <configuration name>\` : Initializes channel configuration into the spreadsheet. \`<configuration name>\` is a name that will be used for spreadsheet tabs.
+- \`!help\` : Shows help
 - \`!scores\` : Show podium (scores total) for this channel. ${channelConfig.leaderboardLink?"Complete leaderboard is available here "+channelConfig.leaderboardLink+".":""}
 - \`!update-users\` : Refreshes this slack server's users list (when a username changes, or new users are added on Slack)
+- \`!setup <configuration name>\` : Initializes channel configuration into the spreadsheet. \`<configuration name>\` is a name that will be used for spreadsheet tabs.
 `;
 
     this.botShouldSay(channel, message);
