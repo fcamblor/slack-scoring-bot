@@ -143,7 +143,8 @@ class ScoringBot {
     const messageInfos = this.retrieveMessageInfosFor(event.item.channel, event.item.ts);
     sheet.appendRow([
       new Date(), event.user, event.item_user, event.item.channel, event.reaction, event.type,
-      messageInfos?messageInfos.threadId:"", messageInfos?messageInfos.threadAuthorId:"", messageInfos?messageInfos.text:""
+      messageInfos?messageInfos.threadId:"", messageInfos?messageInfos.threadAuthorId:"", messageInfos?messageInfos.text:"",
+      event.item.ts
     ]);
   }
 
@@ -181,13 +182,13 @@ class ScoringBot {
     const scoreSheet = spreadsheet.insertSheet(channelConfig.sheetName, spreadsheet.getSheets().length);
     const reactionsSheet = spreadsheet.insertSheet(channelConfig.reactionSheetName, spreadsheet.getSheets().length);
 
-    this.setSheetHeaderRows(scoreSheet, ["=SCORES_FOR_CHANNEL(Config!$A$"+newRowIndex+";Config!$C$"+newRowIndex+";UserList!A:B;'"+channelConfig.reactionSheetName+"'!A:I)"], "formulas");
+    this.setSheetHeaderRows(scoreSheet, ["=SCORES_FOR_CHANNEL(Config!$A$"+newRowIndex+";Config!$C$"+newRowIndex+";UserList!A:B;'"+channelConfig.reactionSheetName+"'!A:K)"], "formulas");
 
     reactionsSheet.deleteRows(2, reactionsSheet.getMaxRows() - 2);
-    reactionsSheet.getRange(1, 10, 1, 1).setFormulas([
-      ["=EXTRACT_SCORES_FROM_REACTIONS(Config!$A$"+newRowIndex+";Config!$C$"+newRowIndex+";UserList!A:B;A:I)"]
+    reactionsSheet.getRange(1, 11, 1, 1).setFormulas([
+      ["=EXTRACT_SCORES_FROM_REACTIONS(Config!$A$"+newRowIndex+";Config!$C$"+newRowIndex+";UserList!A:B;A:K)"]
     ]);
-    this.setSheetHeaderRows(reactionsSheet, ["date", "issuer user id", "target user id", "channel reaction", "type", "thread id", "thread author id", "target message"], "values");
+    this.setSheetHeaderRows(reactionsSheet, ["date", "issuer user id", "target user id", "channel", "channel reaction", "type", "thread id", "thread author id", "target message", "target message id", ""], "values");
 
     this.botShouldSay(event.channel, "Your config ["+configName+"] has been successfully initialized !\n⚠️Don't forget to publish the score sheet and put the link in the leaderboard channel configuration.", event.thread_ts);
   }
