@@ -31,15 +31,30 @@ interface ReactionEvent extends SlackEvent {
   user: string;
   item_user: string;
   item: {
+    type: string;
     channel: string;
     ts: string;
   }
   reaction: string;
+  event_ts: string;
 }
 interface ChannelMessageEvent extends SlackEvent {
   channel: string;
   user: string;
   thread_ts?: string;
+
+  // Useless at the moment
+  client_msg_id: string;
+  ts: string;
+  team: string;
+  "blocks": {
+    type: string;
+    block_id: string;
+    elements: any[]
+  }[];
+  parent_user_id: string;
+  event_ts: string;
+  channel_type: string;
 }
 
 interface ChannelConfig {
