@@ -71,6 +71,7 @@ interface ChannelDescriptor {
   sheetName: string;
   reactionSheetName: string;
   leaderboardLink: string;
+  configSheetRow: number;
 }
 
 interface MessageInfos {
@@ -116,6 +117,8 @@ class ScoringBot {
       } else if(ScoringBot.isSetupChannelCommand(event)) {
         this.setupChannel(event);
         this.updateUsers();
+      } else if(ScoringBot.isReactionsConfigCommand(event)) {
+        this.updateReactionsConfigs(event);
       } else if(ScoringBot.isUpdateUsersCommand(event)) {
         this.updateUsers();
         this.botShouldSay(event.channel, "Users have been updated", event.thread_ts);
@@ -145,6 +148,67 @@ class ScoringBot {
       new Date(), event.user, event.item_user, event.item.channel, event.reaction, event.type,
       messageInfos?messageInfos.threadId:"", messageInfos?messageInfos.threadAuthorId:"", messageInfos?messageInfos.text:"",
       event.item.ts
+    ]);
+  }
+
+  updateReactionsConfigs(event: ChannelMessageEvent) {
+    let config = this.getConfigForChannel(event.channel);
+    if(!config) {
+      this.showChannelNotConfiguredMessage(event);
+      return;
+    }
+
+    if(config.config.adminUser !== event.user) {
+      let usersById = this.getUsersById();
+      this.botShouldSay(event.channel, `Reactions configuration can only be updated by channel's admin (${usersById[config.config.adminUser].name})`, event.thread_ts);
+      return;
+    }
+
+    let args = event.text.split(" ");
+    args.shift();
+    if(args.length === 0 || ["update", "delete"].indexOf(args[0]) === -1) {
+      this.botShouldSay(event.channel,`:warning: Error !
+Usages: 
+- \`!reactions-config update <reaction> <score>\`
+- \`!reactions-config delete <reaction>\`
+`, event.thread_ts);
+      return;
+    }
+
+    if(args[0] === "update") {
+      if(args.length !== 3 || isNaN(Number(args[2]))) {
+        this.botShouldSay(event.channel,`:warning: Error ! 
+Usage: \`!reactions-config update <reaction> <score>\`
+Example: \`!reactions-config update :white_check_mark: 2\`
+`, event.thread_ts);
+        return;
+      }
+
+      const reaction = args[1].replace(/:/gi, "");
+      const score = Number(args[2]);
+      config.config.reactionsConfigs[reaction] = { scoreIncrement: score };
+      this.updateChannelConfig(event.channel, config);
+      this.botShouldSay(event.channel, "Configuration updated successfully !", event.thread_ts);
+    } else if(args[0] === "delete") {
+      if(args.length !== 2) {
+        this.botShouldSay(event.channel,`:warning: Error !
+Usage: \`!reactions-config delete <reaction>\`
+Example: \`!reactions-config delete :white_check_mark:\`
+`, event.thread_ts);
+        return;
+      }
+
+      const reaction = args[1].replace(/:/gi, "");
+      delete config.config.reactionsConfigs[reaction];
+      this.updateChannelConfig(event.channel, config);
+      this.botShouldSay(event.channel, "Configuration deleted successfully !", event.thread_ts);
+    }
+  }
+
+  updateChannelConfig(channel: string, channelDescriptor: ChannelDescriptor) {
+    const configSheet = this.getSheetByName("Config");
+    configSheet.getRange(channelDescriptor.configSheetRow, 3, 1, 1).setValues([
+        [ JSON.stringify(channelDescriptor.config) ]
     ]);
   }
 
@@ -249,14 +313,18 @@ class ScoringBot {
     this.botShouldSay(channel, scoresMessage+(channelConfig.leaderboardLink?"\n_Complete leaderboard is available here : "+channelConfig.leaderboardLink+" _":""), event.thread_ts);
   }
 
+  showChannelNotConfiguredMessage(event: ChannelMessageEvent) {
+    this.botShouldSay(event.channel, `
+It appears this channel has not be configured yet.
+To initialize it, you can type \`!setup <configuration name>\`, it will initialize channel configuration into the spreadsheet. \`<configuration name>\` is a name that will be used for spreadsheet tabs.
+      `, event.thread_ts);
+  }
+
   showHelp(event: ChannelMessageEvent) {
     const channel = event.channel;
     const channelConfig = this.getConfigForChannel(channel);
     if(!channelConfig) {
-      this.botShouldSay(channel, `
-It appears this channel has not be configured yet.
-To initialize it, you can type \`!setup <configuration name>\`, it will initialize channel configuration into the spreadsheet. \`<configuration name>\` is a name that will be used for spreadsheet tabs.
-      `, event.thread_ts);
+      this.showChannelNotConfiguredMessage(event);
       return;
     }
 
@@ -290,6 +358,7 @@ Following observed interactions are configured on this channel :
 Following commands are available :
 - \`!help\` : Shows help
 - \`!scores\` : Show podium (scores total) for this channel. ${channelConfig.leaderboardLink?"Complete leaderboard is available here "+channelConfig.leaderboardLink+".":""}
+- \`!reactions-config update|delete <reaction> [<score>]\` : Allows to dynamically update scores assigned to reactions for this channel. Can only be achieved by this channel's admin (${usersById[channelConfig.config.adminUser].name}).
 - \`!update-users\` : Refreshes this slack server's users list (when a username changes, or new users are added on Slack)
 - \`!setup <configuration name>\` : Initializes channel configuration into the spreadsheet. \`<configuration name>\` is a name that will be used for spreadsheet tabs.
 `;
@@ -319,7 +388,6 @@ Following commands are available :
   getConfigForChannel(channel: string): ChannelDescriptor|null {
     const configSheet = this.getSheetByName("Config");
     const configData = configSheet.getDataRange().getValues();
-    let channelConfig = null, sheetName = null;
     for(let i=1; i<configData.length; i++){
       if(configData[i][0] === channel) {
         return {
@@ -327,7 +395,8 @@ Following commands are available :
           config: JSON.parse(configData[i][2]),
           sheetName: configData[i][1],
           reactionSheetName: configData[i][1]+"-ReactionsLog",
-          leaderboardLink: configData[i][3]
+          leaderboardLink: configData[i][3],
+          configSheetRow: i+1
         };
       }
     }
@@ -392,5 +461,6 @@ Following commands are available :
   static isSetupChannelCommand(event: SlackEvent): event is ChannelMessageEvent { return !!event.text.match(/!setup/); }
   static isScoresCommand(event: SlackEvent): event is ChannelMessageEvent { return !!event.text.match(/!scores/); }
   static isHelpCommand(event: SlackEvent): event is ChannelMessageEvent { return !!event.text.match(/!help/); }
+  static isReactionsConfigCommand(event: SlackEvent): event is ChannelMessageEvent { return !!event.text.match(/!reactions-config/); }
 }
 
