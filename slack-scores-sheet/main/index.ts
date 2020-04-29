@@ -17,23 +17,29 @@ interface User {
 }
 type UsersById = { [key in string]: User };
 
+type ReactionType = "reaction_removed"|"reaction_added";
 interface ReactionLog {
   date: Date;
   issuerUserId: string;
   targetUserId: string;
   channel: string;
   reaction: string;
-  type: "reaction_removed"|"reaction_added";
+  type: ReactionType;
   threadId: string;
   threadAuthorUserId: string;
+  targetMessage: string;
+  targetMessageId: string;
 }
+
+interface ReactionConfig {
+  scoreIncrement: number;
+}
+type PerReactionConfigs = { [reaction in string]: ReactionConfig };
 
 interface ChannelConfig {
   adminUser?: string;
   restrictReactionsToThreadAuthors: boolean;
-  reactionsConfigs: {
-    [reaction in string]: {scoreIncrement: number};
-  };
+  reactionsConfigs: PerReactionConfigs;
 }
 
 interface ScoreLog {
@@ -43,6 +49,7 @@ interface ScoreLog {
   targetName: string;
   reaction: string;
   scoreChange: number|null;
+  duplicationDetected: boolean;
 }
 
 interface UserScore {
@@ -60,8 +67,8 @@ function EXTRACT_SCORES_FROM_REACTIONS(channelName: string, textualChannelConfig
   const reactionLogs = getReactionLogsFrom(reactionLogsData);
 
   const scoreLogs = generateScoreLogsFor(channelName, JSON.parse(textualChannelConfig), usersById, reactionLogs);
-  const scoresRows = [[ "issuer name", "target name", "score change" ]]
-    .concat(scoreLogs.map(scoreLog => [ scoreLog.issuerName, scoreLog.targetName, scoreLog.scoreChange as any ]))
+  const scoresRows = [[ "issuer name", "target name", "score change", "Comment" ]]
+    .concat(scoreLogs.map(scoreLog => [ scoreLog.issuerName, scoreLog.targetName, scoreLog.scoreChange as any, scoreLog.duplicationDetected?"Duplication detected":"" ]))
 
   return scoresRows;
 }
@@ -75,14 +82,34 @@ function SCORES_FOR_CHANNEL(channelName: string, textualChannelConfig: string, u
 
 
 function generateScoreLogsFor(channelName: string, channelConfig: ChannelConfig, usersById: UsersById, reactionLogs: ReactionLog[]): ScoreLog[] {
-  return reactionLogs.map(rl => ({
-    issuerUserId: rl.issuerUserId,
-    issuerName: usersById[rl.issuerUserId].name,
-    targetUserId: rl.targetUserId,
-    targetName: usersById[rl.targetUserId].name,
-    reaction: rl.reaction,
-    scoreChange: scoreChangeFor(rl, channelName, channelConfig)
-  }));
+  const perUserLatestMessageReactionType: {[messageUserReaction: string]: ReactionType} = {};
+  return reactionLogs.map(rl => {
+    // Notes :
+    // - because of legacy behaviour where we didn't had target message id in the spreadsheet, we are
+    //   relying on message content (coupled with thread id and target user id) when target message id is missing
+    // - target user id is important, because sometimes we may have (legacy) usage where we don't have message
+    //   id and same answer (message content) may be provided by different users and assigned the same reaction
+    const messageUserReaction = `${rl.issuerUserId}||${rl.targetUserId}||${rl.threadId}||${rl.targetMessageId || rl.targetMessage}||${rl.reaction}`;
+    let scoreChange, duplicationDetected;
+    if(perUserLatestMessageReactionType[messageUserReaction] !== rl.type) {
+      scoreChange = scoreChangeFor(rl, channelName, channelConfig);
+      perUserLatestMessageReactionType[messageUserReaction] = rl.type;
+      duplicationDetected = false;
+    } else {
+      scoreChange = "";
+      duplicationDetected = true;
+    }
+
+    return {
+      issuerUserId: rl.issuerUserId,
+      issuerName: usersById[rl.issuerUserId].name,
+      targetUserId: rl.targetUserId,
+      targetName: usersById[rl.targetUserId].name,
+      reaction: rl.reaction,
+      scoreChange: scoreChange,
+      duplicationDetected
+    };
+  });
 }
 
 function scoreChangeFor(reactionLog: ReactionLog, inChannel: string, channelConfig: ChannelConfig): number|null {
@@ -156,7 +183,7 @@ function getUsersFrom(userData: string[][]): UsersById {
 function getReactionLogsFrom(reactionLogsData): ReactionLog[] {
   const reactionLogs: ReactionLog[] = [];
   for(let i=1; i<reactionLogsData.length; i++){
-    reactionLogs.push({
+    const reactionLog = {
       date: reactionLogsData[i][0],
       issuerUserId: reactionLogsData[i][1],
       targetUserId: reactionLogsData[i][2],
@@ -164,8 +191,11 @@ function getReactionLogsFrom(reactionLogsData): ReactionLog[] {
       reaction: reactionLogsData[i][4],
       type: reactionLogsData[i][5],
       threadId: reactionLogsData[i][6],
-      threadAuthorUserId: reactionLogsData[i][7]
-    });
+      threadAuthorUserId: reactionLogsData[i][7],
+      targetMessage: reactionLogsData[i][8],
+      targetMessageId: reactionLogsData[i][9]
+    };
+    reactionLogs.push(reactionLog);
   }
   return reactionLogs;
 }
