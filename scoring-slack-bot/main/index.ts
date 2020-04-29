@@ -39,6 +39,7 @@ interface ReactionEvent extends SlackEvent {
 interface ChannelMessageEvent extends SlackEvent {
   channel: string;
   user: string;
+  thread_ts?: string;
 }
 
 interface ChannelConfig {
@@ -102,11 +103,11 @@ class ScoringBot {
         this.updateUsers();
       } else if(ScoringBot.isUpdateUsersCommand(event)) {
         this.updateUsers();
-        this.botShouldSay(event.channel, "Users have been updated");
+        this.botShouldSay(event.channel, "Users have been updated", event.thread_ts);
       } else if(ScoringBot.isScoresCommand(event)) {
-        this.showScoresFor(event.channel);
+        this.showScores(event);
       } else if(ScoringBot.isHelpCommand(event)) {
-        this.showHelp(event.channel);
+        this.showHelp(event);
       } else {
         this.log("No callback matched event !");
       }
@@ -140,14 +141,14 @@ class ScoringBot {
 
     let channelConfig = this.getConfigForChannel(event.channel);
     if(channelConfig){
-      this.botShouldSay(event.channel, "Current channel seems to already have been setup");
+      this.botShouldSay(event.channel, "Current channel seems to already have been setup", event.thread_ts);
       return;
     }
 
     let args = event.text.split(" ");
     args.shift();
     if(args.length != 1) {
-      this.botShouldSay(event.channel, "Usage: !setup <config name>");
+      this.botShouldSay(event.channel, "Usage: !setup <config name>", event.thread_ts);
       return;
     }
     const configName = args[0];
@@ -173,7 +174,7 @@ class ScoringBot {
     ]);
     this.setSheetHeaderRows(reactionsSheet, ["date", "issuer user id", "target user id", "channel reaction", "type", "thread id", "thread author id", "target message"], "values");
 
-    this.botShouldSay(event.channel, "Your config ["+configName+"] has been successfully initialized !\n⚠️Don't forget to publish the score sheet and put the link in the leaderboard channel configuration.");
+    this.botShouldSay(event.channel, "Your config ["+configName+"] has been successfully initialized !\n⚠️Don't forget to publish the score sheet and put the link in the leaderboard channel configuration.", event.thread_ts);
   }
 
   ensureSheetCreated(sheetName: string, headerCells: string[]|null, headerCellsType: "formulas"|"values"|null) {
@@ -207,37 +208,39 @@ class ScoringBot {
     sheet.getRange(1, 1, rows.length, 2).setValues(rows);
   }
 
-  showScoresFor(channel: string) {
+  showScores(event: ChannelMessageEvent) {
+    const channel = event.channel;
     const channelConfig = this.getConfigForChannel(channel);
 
     if(!channelConfig) {
-      this.botShouldSay(channel, "I was unable to locate channel config for ["+channel+"] in the spreadsheet !");
+      this.botShouldSay(channel, "I was unable to locate channel config for ["+channel+"] in the spreadsheet !", event.thread_ts);
       return;
     }
 
     const scoresSheet = this.getSheetByName(channelConfig.sheetName);
     if(!scoresSheet) {
-      this.botShouldSay(channel, "I was unable to locate spreadsheet's sheet named ["+channelConfig.sheetName+"] corresponding to channel ["+channel+"] !");
+      this.botShouldSay(channel, "I was unable to locate spreadsheet's sheet named ["+channelConfig.sheetName+"] corresponding to channel ["+channel+"] !", event.thread_ts);
       return;
     }
 
     const scoresData = scoresSheet.getDataRange().getValues();
     const scoresMessage = this.createScoreMessagesFrom(scoresData);
     if(!scoresMessage) {
-      this.botShouldSay(channel, "No score available yet in spreadsheet's sheet named ["+channelConfig.sheetName+"] corresponding to channel ["+channel+"] !");
+      this.botShouldSay(channel, "No score available yet in spreadsheet's sheet named ["+channelConfig.sheetName+"] corresponding to channel ["+channel+"] !", event.thread_ts);
       return;
     }
 
-    this.botShouldSay(channel, scoresMessage+(channelConfig.leaderboardLink?"\n_Complete leaderboard is available here : "+channelConfig.leaderboardLink+" _":""));
+    this.botShouldSay(channel, scoresMessage+(channelConfig.leaderboardLink?"\n_Complete leaderboard is available here : "+channelConfig.leaderboardLink+" _":""), event.thread_ts);
   }
 
-  showHelp(channel: string) {
+  showHelp(event: ChannelMessageEvent) {
+    const channel = event.channel;
     const channelConfig = this.getConfigForChannel(channel);
     if(!channelConfig) {
       this.botShouldSay(channel, `
 It appears this channel has not be configured yet.
 To initialize it, you can type \`!setup <configuration name>\`, it will initialize channel configuration into the spreadsheet. \`<configuration name>\` is a name that will be used for spreadsheet tabs.
-      `);
+      `, event.thread_ts);
       return;
     }
 
@@ -275,7 +278,7 @@ Following commands are available :
 - \`!setup <configuration name>\` : Initializes channel configuration into the spreadsheet. \`<configuration name>\` is a name that will be used for spreadsheet tabs.
 `;
 
-    this.botShouldSay(channel, message);
+    this.botShouldSay(channel, message, event.thread_ts);
   }
 
   createScoreMessagesFrom(scoresData: string[][]): string|null {
@@ -353,8 +356,8 @@ Following commands are available :
     return usersById;
   }
 
-  botShouldSay(channel: string, text: string): void {
-    var payload = {token: PROPS.SLACK_ACCESS_TOKEN, channel:channel, text:text };
+  botShouldSay(channel: string, text: string, threadId?: string): void {
+    var payload = {token: PROPS.SLACK_ACCESS_TOKEN, channel:channel, text:text, thread_ts: threadId };
     UrlFetchApp.fetch('https://slack.com/api/chat.postMessage', {method: 'post', payload: payload});
   }
 
